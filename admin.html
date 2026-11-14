@@ -16,7 +16,7 @@
   <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" sizes="180x180">
   <link rel="stylesheet" href="css/styles.css?v=22">
-  <link rel="stylesheet" href="css/admin.css?v=22">
+  <link rel="stylesheet" href="css/admin.css?v=23">
 </head>
 <body class="admin-body">
   <main class="panel-cerrado" data-panel-cerrado>
@@ -327,9 +327,15 @@
 
   <div class="pa-modal" data-cita-modal hidden>
     <div class="pa-modal-card" role="dialog" aria-modal="true" aria-labelledby="cita-modal-titulo">
-      <h2 id="cita-modal-titulo">Cita</h2>
+      <div class="cita-modal-cabeza">
+        <h2 id="cita-modal-titulo">Cita</h2>
+        <button class="cita-cerrar" type="button" data-cita-cerrar aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6 18 18M18 6 6 18"></path>
+          </svg>
+        </button>
+      </div>
       <div data-cita-modal-cuerpo></div>
-      <button class="btn btn-sec" type="button" data-cita-cerrar>Cerrar</button>
     </div>
   </div>
 
@@ -396,6 +402,6 @@
       <button class="btn" type="button" data-install-close>Listo</button>
     </div>
   </div>
-  <script type="module" src="js/admin.js?v=27"></script>
+  <script type="module" src="js/admin.js?v=28"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE = "site-shell-v30";
+const CACHE = "site-shell-v31";
 
 const SHELL = [
   "index.html",

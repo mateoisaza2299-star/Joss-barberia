@@ -413,16 +413,18 @@ function abrirCita(reserva) {
   const modal = document.querySelector("[data-cita-modal]");
   const cuerpo = document.querySelector("[data-cita-modal-cuerpo]");
   if (!modal || !cuerpo) return;
-  cuerpo.replaceChildren();
-  cuerpo.append(
-    nodo("p", null, reserva.nombre),
-    nodo("p", null, digitos(reserva.telefono)),
-    nodo("p", null, [nombreServicio(reserva.servicio_id), precioDeReserva(reserva)].filter(Boolean).join(" · ")),
-    nodo("p", null, fechaLegible(reserva.fecha) + " · " + horaLegible(reserva.hora)),
-    nodo("p", "cita-estado estado-" + reserva.estado, etiquetaEstado(reserva.estado)),
-    nodo("p", null, reserva.notas || "")
+  const datos = nodo("div", "cita-datos");
+  datos.append(
+    nodo("p", "cita-nombre", reserva.nombre),
+    nodo("p", "cita-dato", digitos(reserva.telefono)),
+    nodo("p", "cita-dato", [nombreServicio(reserva.servicio_id), precioDeReserva(reserva)].filter(Boolean).join(" · ")),
+    nodo("p", "cita-dato", fechaLegible(reserva.fecha) + " · " + horaLegible(reserva.hora))
   );
-  cuerpo.appendChild(accionesDe(reserva));
+  const nota = String(reserva.notas || "").trim();
+  if (nota) datos.appendChild(nodo("p", "cita-nota", nota));
+  datos.appendChild(nodo("p", "cita-estado cita-badge estado-" + reserva.estado, etiquetaEstado(reserva.estado)));
+  cuerpo.replaceChildren();
+  cuerpo.append(datos, accionesDe(reserva, true));
   modal.hidden = false;
   const cerrar = modal.querySelector("[data-cita-cerrar]");
   if (cerrar) cerrar.focus();
@@ -432,25 +434,30 @@ function etiquetaEstado(valor) {
   return { pendiente: "Pendiente", confirmada: "Confirmada", completada: "Completada", cancelada: "Cancelada", no_asistio: "No asistió" }[valor] || valor;
 }
 
-function accionesDe(reserva) {
+function accionesDe(reserva, enModal) {
   const caja = nodo("div", "cita-acciones");
-  const poner = (texto, accion, clase) => {
+  const principales = enModal ? nodo("div", "cita-acciones-principales") : caja;
+  const secundarias = enModal ? nodo("div", "cita-acciones-secundarias") : caja;
+  const poner = (texto, accion, clase, grupo) => {
     const boton = nodo("button", clase || "btn btn-sec", texto);
     boton.type = "button";
     boton.dataset.accion = accion;
     boton.dataset.id = reserva.id;
     boton.addEventListener("click", () => ejecutar(reserva, accion, boton));
-    caja.appendChild(boton);
+    (grupo === "sec" ? secundarias : principales).appendChild(boton);
     return boton;
   };
+  const activa = reserva.estado === "pendiente" || reserva.estado === "confirmada";
   if (reserva.estado === "pendiente") poner("Confirmar", "confirmar", "btn");
-  if (reserva.estado === "pendiente" || reserva.estado === "confirmada") {
-    poner("Marcar completada", "completada");
+  if (!enModal && activa) poner("Marcar completada", "completada");
+  if (!enModal && activa) {
     poner("No asistió", "no_asistio");
     poner("Cancelar", "cancelar");
   }
-  if (!reserva.gratis && (reserva.estado === "pendiente" || reserva.estado === "confirmada")) {
-    const gratis = poner("Aplicar corte gratis", "gratis");
+  let gratis = null;
+  if (!reserva.gratis && activa) {
+    gratis = poner("Aplicar corte gratis", "gratis");
+    if (enModal) principales.removeChild(gratis);
     gratis.hidden = true;
     fichaDe(reserva.telefono).then((ficha) => {
       if (ficha && ficha.gratis_disponible && gratis.isConnected) gratis.hidden = false;
@@ -466,13 +473,21 @@ function accionesDe(reserva) {
       enlace.rel = "noopener";
       enlace.dataset.accion = "avisar";
       enlace.addEventListener("click", () => marcarAvisado(reserva));
-      caja.appendChild(enlace);
+      principales.appendChild(enlace);
     }
   }
-  if ((reserva.estado === "pendiente" || reserva.estado === "confirmada") && !reserva.avisado) {
-    caja.appendChild(nodo("span", "falta-avisar", "Falta avisar"));
+  if (activa && !reserva.avisado) principales.appendChild(nodo("span", "falta-avisar", "Falta avisar"));
+  if (enModal && gratis) principales.appendChild(gratis);
+  if (enModal && activa) {
+    poner("No asistió", "no_asistio", null, "sec");
+    poner("Cancelar", "cancelar", "btn btn-peligro", "sec");
   }
-  if (reserva.gratis) caja.appendChild(nodo("span", "fid-gratis", "Corte gratis"));
+  const marcaGratis = reserva.gratis ? nodo("span", "fid-gratis", "Corte gratis") : null;
+  if (enModal) {
+    if (principales.childNodes.length) caja.appendChild(principales);
+    if (secundarias.childNodes.length) caja.appendChild(secundarias);
+  }
+  if (marcaGratis) caja.appendChild(marcaGratis);
   return caja;
 }
 
