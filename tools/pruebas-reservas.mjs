@@ -459,10 +459,8 @@ async function flujoPanel(page, ancho) {
   await foto(page, ancho + "-agenda");
   const extraAgenda = await desborde(page);
   exigir(extraAgenda <= 1, ancho + " desborde agenda " + extraAgenda);
-  const puesta = await textoDe(page.locator("[data-puesta]"));
-  exigir(puesta.includes("Puesta en marcha"), ancho + " sin puesta en marcha");
-  exigir(puesta.includes("Probar la reserva"), ancho + " sin probar la reserva");
-  exigir(!/✓|⚠|no muestran el valor/.test(puesta), ancho + " sigue la verificación: " + puesta);
+  const agendaTexto = await textoDe(page.locator("[data-panel='agenda']"));
+  exigir(!/Puesta en marcha|Probar la reserva/i.test(agendaTexto), ancho + " sigue la puesta en marcha");
   await navVisible(page, "reservas");
   const ana = page.locator("article.pa-cita", { hasText: "Cliente Ana Uno" });
   await ana.locator("[data-accion='confirmar']").click();

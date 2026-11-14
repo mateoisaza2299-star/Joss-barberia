@@ -141,14 +141,6 @@ html.is-offline:has(.login-main) .offline-screen { display: none; }
 
 .login-codigo { margin: 0; color: var(--gris); font-size: 0.8rem; }
 
-.puesta-lista { display: grid; gap: 0.7rem; margin: 0.8rem 0; padding: 0; list-style: none; }
-
-.puesta-ok { color: #7dcea0; }
-
-.puesta-aviso { color: #e0b15a; }
-
-.puesta-lista .btn { margin-top: 0.4rem; }
-
 .horario-todos-card { width: min(40rem, 100%); }
 
 .horario-todos-card .horario-rango,

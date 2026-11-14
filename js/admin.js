@@ -242,9 +242,6 @@ function montarNav() {
     });
   });
   pintarContador();
-  document.querySelectorAll("[data-solo]").forEach((el) => {
-    el.hidden = el.dataset.solo === "dueno" ? !dueno() : dueno();
-  });
   abrir("agenda");
 }
 
@@ -347,7 +344,6 @@ function pintarAgenda() {
   if (!host) return;
   const fechaInput = document.querySelector("[data-agenda-fecha]");
   if (!estado.agendaFecha) estado.agendaFecha = hoyISO();
-  pintarPuesta();
   if (fechaInput && fechaInput.value !== estado.agendaFecha) fechaInput.value = estado.agendaFecha;
   host.removeAttribute("aria-busy");
   host.replaceChildren();
@@ -1438,7 +1434,6 @@ async function guardarLocal(evento) {
     return;
   }
   Object.assign(sede, fila);
-  pintarPuesta();
 }
 
 async function guardarServicio(evento) {
@@ -1595,19 +1590,6 @@ async function guardarAjustes() {
     ok.hidden = false;
     ok.textContent = "Cambios guardados";
   }
-  pintarPuesta();
-}
-
-function pintarPuesta() {
-  const host = document.querySelector("[data-puesta]");
-  if (!host || !dueno()) return;
-  host.replaceChildren();
-  host.appendChild(nodo("h2", null, "Puesta en marcha"));
-  const probar = nodo("a", "btn", "Probar la reserva");
-  probar.href = "index.html#reservar";
-  probar.target = "_blank";
-  probar.rel = "noopener";
-  host.appendChild(probar);
 }
 
 async function salir() {
