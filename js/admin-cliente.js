@@ -1,4 +1,4 @@
-import { negocio, reservasEnLinea } from "./config.js?v=27";
+import { reservasEnLinea } from "./config.js?v=27";
 
 let cliente = null;
 
@@ -15,7 +15,10 @@ export async function obtenerAdmin() {
   if (!reservasEnLinea()) return null;
   if (!cliente) {
     const { createClient } = await import("./vendor/supabase.js");
-    const caja = negocio.supabase;
+    const caja = {
+      url: "https://bkzyaiamlhlbsggsoijk.supabase.co",
+      key: "sb_publishable__BC2lWanJOLLb4gdVcEpKw_4SQO9w6A"
+    };
     cliente = createClient(String(caja.url).trim(), String(caja.key).trim(), {
       auth: {
         persistSession: true,

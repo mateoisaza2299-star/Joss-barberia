@@ -1,11 +1,41 @@
-import { negocio, enlaceTelefono, enlaceDirecciones, formatPrecio, formatDuracion, esAdicional, ordenarServicios, reservasEnLinea } from "./config.js?v=27";
-import { obtenerSupabase } from "./supabase.js?v=27";
+import { negocio, CONFIG, enlaceTelefono, enlaceDirecciones, enlaceWhatsapp, formatPrecio, formatDuracion, esAdicional, ordenarServicios, reservasEnLinea, horasDelDia, partesBogota } from "./config.js?v=27";
 import { traducir, celularValido, nombreValido } from "./errores.js";
 import { hoyISO, sumarDias, fechaLegible, fechaCorta, horaLegible, aMinutos, instanteBogota } from "./tiempo.js";
 import { nodo, hojaEstilos, marcaCasilla } from "./dom.js";
 
-const LLAVE = "lamansion_citas";
-const VISITA = "lamansion_visita";
+// Agenda aislada. Para volver a un backend, reemplaza solo esta función.
+function agendaLocal() {
+  const clave = "joss_reservas";
+  const leer = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem(clave) || "[]");
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      return [];
+    }
+  };
+  return {
+    ocupadas(fecha) {
+      const horas = new Set();
+      leer().forEach((cita) => {
+        if (cita && cita.fecha === fecha && cita.hora) horas.add(String(cita.hora).slice(0, 5));
+      });
+      return horas;
+    },
+    async guardar(cita) {
+      const lista = leer();
+      lista.push(cita);
+      localStorage.setItem(clave, JSON.stringify(lista));
+      const url = enlaceWhatsapp(cita.resumen);
+      if (url) window.open(url, "_blank", "noopener");
+      return cita;
+    }
+  };
+}
+
+const agenda = agendaLocal();
+const LLAVE = "joss_citas";
+const VISITA = "joss_visita";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ESTADOS = {
   pendiente: "Pendiente de confirmación",
@@ -30,8 +60,8 @@ const estado = {
   token: "",
   citas: new Map(),
   horarios: [],
-  supabase: null,
   lista: false,
+  profesionalId: "",
   empujado: false,
   claveServicio: "",
   nombreServicio: "",
@@ -74,12 +104,7 @@ function olvidarToken(token) {
   } catch (error) {}
 }
 
-async function registrar(tipo) {
-  try {
-    if (!estado.supabase) return;
-    await estado.supabase.rpc("registrar_evento", { p_tipo: tipo });
-  } catch (error) {}
-}
+function registrar() {}
 
 function precioDe(servicio) {
   if (!servicio || servicio.precio == null || servicio.precio === "") return "";
@@ -117,11 +142,19 @@ function fijarSede() {
 }
 
 function pasos() {
-  return ["servicio", "horario", "datos"];
+  return ["servicio", "profesional", "dia", "hora", "datos"];
 }
 
 function nombrePaso(clave) {
-  return { servicio: "Servicio", horario: "Fecha y hora", datos: "Datos" }[clave] || clave;
+  return { servicio: "Servicio", profesional: "Profesional", dia: "Día", hora: "Hora", datos: "Datos" }[clave] || clave;
+}
+
+function profesionales() {
+  return (CONFIG.profesionales || []).filter((item) => item && item.id && item.nombre);
+}
+
+function profesionalActual() {
+  return profesionales().find((item) => item.id === estado.profesionalId) || null;
 }
 
 function agendaLista() {
@@ -269,7 +302,7 @@ function descargarIcs(fila) {
   const lineas = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//La Mansion Barber Shop//Citas//ES",
+    "PRODID:-//Joss Peluqueria//Citas//ES",
     "BEGIN:VTIMEZONE",
     "TZID:America/Bogota",
     "BEGIN:STANDARD",
@@ -280,7 +313,7 @@ function descargarIcs(fila) {
     "END:STANDARD",
     "END:VTIMEZONE",
     "BEGIN:VEVENT",
-    "UID:" + (fila.numero || "cita") + "@lamansion",
+    "UID:" + (fila.numero || "cita") + "@joss",
     "DTSTART;TZID=America/Bogota:" + marca(inicio),
     "DTEND;TZID=America/Bogota:" + marca(fin),
     "SUMMARY:" + limpio((fila.servicio || "Cita") + " en " + negocio.nombre),
@@ -292,7 +325,7 @@ function descargarIcs(fila) {
   const url = URL.createObjectURL(blob);
   const enlace = nodo("a");
   enlace.href = url;
-  enlace.download = "cita-" + (fila.numero || "mansion") + ".ics";
+  enlace.download = "cita-" + (fila.numero || "joss") + ".ics";
   document.body.appendChild(enlace);
   enlace.click();
   enlace.remove();
@@ -384,24 +417,7 @@ function pintarCita() {
   host.appendChild(tarjeta);
 }
 
-async function cancelarCita(token, boton) {
-  const aceptar = await preguntar("¿Cancelar esta cita?");
-  if (!aceptar) return;
-  boton.disabled = true;
-  try {
-    const { error } = await estado.supabase.rpc("cancelar_reserva", { p_token: token });
-    if (error) throw error;
-    await refrescarCitas();
-  } catch (error) {
-    const nota = document.querySelector("[data-cita-nota]");
-    if (nota) {
-      nota.hidden = false;
-      nota.textContent = traducir(error);
-    }
-  } finally {
-    boton.disabled = false;
-  }
-}
+async function cancelarCita() {}
 
 function abrirReagendar(token, fila) {
   estado.modo = "reagendar";
@@ -411,33 +427,13 @@ function abrirReagendar(token, fila) {
   estado.hora = "";
   estado.ofertas = new Map();
   const lista = pasos();
-  estado.paso = lista.indexOf("horario");
+  estado.paso = lista.indexOf("dia");
   if (estado.paso < 0) estado.paso = 0;
   abrirHoja();
   pintarPasos();
 }
 
 async function refrescarCitas() {
-  const tokens = leerTokens();
-  if (!tokens.length || !estado.supabase) {
-    pintarCita();
-    return;
-  }
-  for (const token of tokens) {
-    try {
-      const { data, error } = await estado.supabase.rpc("estado_reserva", { p_token: token });
-      if (error || !data) {
-        estado.citas.delete(token);
-        continue;
-      }
-      const fila = Array.isArray(data) ? data[0] : data;
-      if (!fila || !fila.estado) {
-        estado.citas.delete(token);
-        continue;
-      }
-      estado.citas.set(token, fila);
-    } catch (error) {}
-  }
   pintarCita();
 }
 
@@ -477,18 +473,9 @@ function pintarFidelidad() {
       error.textContent = "Revisa tu celular: 10 dígitos y empieza por 3.";
       return;
     }
-    boton.disabled = true;
-    try {
-      const { data, error: falloRpc } = await estado.supabase.rpc("mi_fidelidad", { p_telefono: cel.digitos });
-      if (falloRpc) throw falloRpc;
-      const ficha = Array.isArray(data) ? data[0] : data;
-      pintarSellos(resultado, ficha);
-    } catch (fallo) {
-      error.hidden = false;
-      error.textContent = traducir(fallo);
-    } finally {
-      boton.disabled = false;
-    }
+    boton.disabled = false;
+    error.hidden = false;
+    error.textContent = "La tarjeta no está disponible en esta beta.";
   });
   tarjeta.append(formulario, error, resultado);
   host.appendChild(tarjeta);
@@ -554,7 +541,7 @@ function elegirServicio(servicio) {
   estado.servicioId = servicio.id;
   estado.hora = "";
   if (!estado.fecha) estado.fecha = hoyISO();
-  estado.paso = Math.max(0, pasos().indexOf("horario"));
+  estado.paso = Math.max(0, pasos().indexOf("profesional"));
   pintarPasos();
   const titulo = pasosCaja() && pasosCaja().querySelector("[data-paso-titulo]");
   if (titulo) titulo.focus();
@@ -581,10 +568,12 @@ function pintarPasos() {
   if (estado.paso >= lista.length) estado.paso = lista.length - 1;
   if (estado.paso < 0) estado.paso = 0;
   progreso();
-  const clave = estado.modo === "reagendar" ? "horario" : lista[estado.paso];
+  const clave = estado.modo === "reagendar" ? "dia" : lista[estado.paso];
   cuerpo.replaceChildren();
   if (clave === "servicio") pintarServicios(cuerpo);
-  if (clave === "horario") pintarHorario(cuerpo);
+  if (clave === "profesional") pintarProfesionales(cuerpo);
+  if (clave === "dia") pintarDia(cuerpo);
+  if (clave === "hora") pintarHora(cuerpo);
   if (clave === "datos") pintarDatos(cuerpo);
   const titulo = caja.querySelector("[data-paso-titulo]");
   if (titulo) titulo.textContent = estado.modo === "reagendar" ? "Cambiar fecha u hora" : nombrePaso(clave);
@@ -628,16 +617,14 @@ function pintarServicios(host) {
 }
 
 async function cargarHoras(fecha) {
-  const duracion = duracionElegida();
-  const { data, error } = await estado.supabase.rpc("horas_disponibles", {
-    p_fecha: fecha,
-    p_duracion: duracion
-  });
-  if (error) throw error;
+  const ocupadas = agenda.ocupadas(fecha);
+  const ahora = partesBogota(new Date());
   const mapa = new Map();
-  (Array.isArray(data) ? data : []).forEach((fila) => {
-    const slot = String(fila.slot || "").slice(0, 5);
-    if (slot) mapa.set(slot, true);
+  horasDelDia(fecha).forEach((slot) => {
+    const hora = String(slot).slice(0, 5);
+    if (!hora || ocupadas.has(hora)) return;
+    if (fecha === ahora.iso && aMinutos(hora) <= ahora.minutos) return;
+    mapa.set(hora, true);
   });
   return mapa;
 }
@@ -658,21 +645,38 @@ async function sugerirDia(desde) {
   return "";
 }
 
-function pintarHorario(host) {
+function pintarProfesionales(host) {
   const servicio = servicioActual();
-  if (servicio && estado.modo !== "reagendar") {
-    const precio = precioDe(servicio);
-    const detalle = [servicio.nombre, formatDuracion(servicio.duracion_min), precio].filter(Boolean).join(" · ");
-    host.appendChild(nodo("p", "reserva-elegido", detalle));
-    const cambiar = nodo("button", "btn btn-sec", "Cambiar servicio");
-    cambiar.type = "button";
-    cambiar.addEventListener("click", () => {
-      estado.paso = 0;
-      estado.hora = "";
-      pintarPasos();
-    });
-    host.appendChild(cambiar);
+  if (servicio) host.appendChild(nodo("p", "reserva-elegido", servicio.nombre));
+  const lista = nodo("div", "opciones opciones-barberos");
+  const gente = profesionales();
+  if (!gente.length) {
+    host.appendChild(nodo("p", null, "No hay profesionales disponibles."));
+    return;
   }
+  gente.forEach((persona) => {
+    const boton = nodo("button", "opcion opcion-barbero", "");
+    boton.type = "button";
+    boton.dataset.profesional = persona.id;
+    const inicial = nodo("span", "opcion-inicial", String(persona.nombre).trim().slice(0, 1).toUpperCase());
+    const texto = nodo("span", "opcion-texto");
+    texto.append(nodo("strong", null, persona.nombre), nodo("span", null, persona.rol || "Profesional"));
+    boton.append(inicial, texto);
+    boton.addEventListener("click", () => {
+      estado.profesionalId = persona.id;
+      estado.hora = "";
+      avanzar();
+    });
+    lista.appendChild(boton);
+  });
+  host.appendChild(lista);
+}
+
+function pintarDia(host) {
+  const servicio = servicioActual();
+  const persona = profesionalActual();
+  const detalle = [servicio && servicio.nombre, persona && persona.nombre].filter(Boolean).join(" · ");
+  if (detalle) host.appendChild(nodo("p", "reserva-elegido", detalle));
   host.appendChild(nodo("p", "hora-duracion", "Duración: " + (formatDuracion(duracionElegida()) || duracionElegida() + " min")));
   const maximo = Math.max(1, Number(estado.config && estado.config.dias_max) || 14);
   const hoy = hoyISO();
@@ -692,6 +696,7 @@ function pintarHorario(host) {
     boton.addEventListener("click", () => {
       estado.fecha = fecha;
       estado.hora = "";
+      estado.paso = pasos().indexOf("hora");
       pintarPasos();
     });
     tira.appendChild(boton);
@@ -717,6 +722,12 @@ function pintarHorario(host) {
     });
     host.appendChild(mas);
   }
+}
+
+function pintarHora(host) {
+  const persona = profesionalActual();
+  const detalle = [fechaLegible(estado.fecha), persona && persona.nombre].filter(Boolean).join(" · ");
+  if (detalle) host.appendChild(nodo("p", "reserva-elegido", detalle));
   const horas = nodo("div", "horas");
   horas.dataset.horas = "1";
   host.appendChild(horas);
@@ -805,30 +816,34 @@ function elegirHora(slot) {
 }
 
 async function guardarReagendo(boton) {
-  boton.disabled = true;
-  try {
-    const { error } = await estado.supabase.rpc("reagendar_reserva", {
-      p_token: estado.token,
-      p_fecha: estado.fecha,
-      p_hora: estado.hora
-    });
-    if (error) throw error;
-    estado.modo = "";
-    cerrarHoja();
-    await refrescarCitas();
-  } catch (error) {
-    const horas = document.querySelector("[data-horas]");
-    if (horas) horas.appendChild(nodo("p", "form-error", traducir(error)));
-  } finally {
-    boton.disabled = false;
-  }
+  if (boton) boton.disabled = false;
+}
+
+function resumenTexto(nombre, celular) {
+  const servicio = servicioActual();
+  const persona = profesionalActual();
+  const lineas = [
+    "Hola, quiero reservar en " + negocio.nombre + ".",
+    "Servicio: " + (servicio ? servicio.nombre : ""),
+    "Profesional: " + (persona ? persona.nombre : ""),
+    "Día: " + fechaLegible(estado.fecha),
+    "Hora: " + horaLegible(estado.hora),
+    "Nombre: " + (nombre || ""),
+    "Celular: " + (celular || "")
+  ];
+  const precio = precioDe(servicio);
+  if (precio) lineas.push("Precio: " + precio);
+  lineas.push("Dirección: " + negocio.direccion);
+  return lineas.filter(Boolean).join("\n");
 }
 
 function resumenCita() {
   const servicio = servicioActual();
+  const persona = profesionalActual();
   const caja = nodo("aside", "reserva-resumen");
   caja.appendChild(nodo("p", "etiqueta", "Tu cita"));
   caja.appendChild(nodo("p", null, servicio ? servicio.nombre : ""));
+  if (persona) caja.appendChild(nodo("p", null, persona.nombre));
   caja.appendChild(nodo("p", null, formatDuracion(duracionElegida())));
   caja.appendChild(nodo("p", null, fechaLegible(estado.fecha) + " · " + horaLegible(estado.hora)));
   const precio = precioDe(servicio);
@@ -968,24 +983,27 @@ async function enviarReserva(evento, formulario, boton, error) {
   boton.disabled = true;
   boton.textContent = "Reservando…";
   try {
-    const payload = {
-      p_servicio: estado.servicioId,
-      p_fecha: estado.fecha,
-      p_hora: estado.hora,
-      p_nombre: nombre,
-      p_telefono: cel.digitos,
-      p_notas: String(datos.get("notas") || "").slice(0, 200),
-      p_autoriza: autoriza === true
+    const persona = profesionalActual();
+    const servicio = servicioActual();
+    const cita = {
+      servicio: servicio ? servicio.nombre : "",
+      profesional: persona ? persona.nombre : "",
+      fecha: estado.fecha,
+      hora: estado.hora,
+      nombre,
+      celular: cel.digitos,
+      notas: String(datos.get("notas") || "").slice(0, 200),
+      resumen: resumenTexto(nombre, cel.digitos)
     };
-    const respuesta = await estado.supabase.rpc("crear_reserva", payload);
-    const data = respuesta.data;
-    const falloRpc = respuesta.error;
-    if (falloRpc) throw falloRpc;
-    const fila = Array.isArray(data) ? data[0] : data;
-    if (!fila || !fila.token) throw new Error("sin token");
-    guardarToken(fila.token);
-    await refrescarCitas();
-    pintarConfirmacion(fila, nombre);
+    await agenda.guardar(cita);
+    pintarConfirmacion({
+      token: "",
+      numero: "",
+      servicio: cita.servicio,
+      profesional: cita.profesional,
+      fecha: cita.fecha,
+      hora: cita.hora
+    }, nombre);
   } catch (fallo) {
     error.hidden = false;
     error.textContent = traducir(fallo);
@@ -1003,9 +1021,10 @@ function pintarConfirmacion(creada, nombre) {
   const fila = estado.citas.get(String(creada.token || "").toLowerCase()) || {
     numero: creada.numero,
     nombre,
-    servicio: (servicioActual() || {}).nombre,
-    fecha: estado.fecha,
-    hora: estado.hora,
+    servicio: creada.servicio || (servicioActual() || {}).nombre,
+    barbero: creada.profesional || (profesionalActual() || {}).nombre || "",
+    fecha: creada.fecha || estado.fecha,
+    hora: creada.hora || estado.hora,
     duracion_min: (servicioActual() || {}).duracion_min,
     direccion: negocio.direccion,
     precio: (servicioActual() || {}).precio
@@ -1103,7 +1122,6 @@ async function abrirPublico(clave, nombre) {
 async function reintentarCarga(boton) {
   if (boton) boton.disabled = true;
   if (reservasEnLinea()) {
-    if (!estado.supabase) estado.supabase = await obtenerSupabase();
     try {
       await cargarCatalogo();
       estado.lista = agendaLista();
@@ -1181,14 +1199,9 @@ function montarInterfaz() {
 }
 
 async function cargarCatalogo() {
-  const supabase = estado.supabase;
-  const [config, servicios] = await Promise.all([
-    supabase.from("config").select("*").eq("id", 1).limit(1),
-    supabase.from("servicios").select("*").order("orden")
-  ]);
-  if (config.error || servicios.error) throw new Error("carga");
-  estado.config = (config.data && config.data[0]) || null;
-  estado.servicios = servicios.data || [];
+  estado.config = { reservas_activas: true, dias_max: 14 };
+  estado.servicios = (negocio.servicios || []).map((item) => ({ ...item, activo: item.activo !== false }));
+  estado.sedes = [{ id: "local", nombre: negocio.nombre, activa: true, orden: 1 }];
 }
 
 function leerPrecarga() {
@@ -1202,32 +1215,13 @@ async function prepararCatalogo() {
     estado.lista = false;
     return;
   }
-  estado.supabase = await obtenerSupabase();
-  if (!estado.supabase) {
-    estado.lista = false;
-    return;
-  }
-  try {
-    if (!sessionStorage.getItem(VISITA)) {
-      sessionStorage.setItem(VISITA, "1");
-      registrar("visita");
-    }
-  } catch (error) {}
   try {
     await cargarCatalogo();
+    fijarSede();
     estado.lista = agendaLista();
   } catch (error) {
     estado.lista = false;
   }
-  if (!estado.lista) return;
-  pintarFidelidad();
-  await refrescarCitas();
-  window.setInterval(() => {
-    if (document.visibilityState === "visible") refrescarCitas();
-  }, 30000);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refrescarCitas();
-  });
 }
 
 export async function iniciarReservas() {
@@ -1240,11 +1234,6 @@ export async function iniciarReservas() {
       abrirPublico(reservar.getAttribute("data-servicio") || "", reservar.getAttribute("data-servicio-nombre") || "");
       return;
     }
-    const nodoClic = evento.target.closest("[data-wa], [data-wa-contacto], [data-tel], [data-maps]");
-    if (!nodoClic || !estado.supabase) return;
-    if (nodoClic.hasAttribute("data-wa") || nodoClic.hasAttribute("data-wa-contacto")) registrar("clic_whatsapp");
-    else if (nodoClic.hasAttribute("data-tel")) registrar("clic_llamar");
-    else registrar("clic_mapa");
   });
   window.addEventListener("popstate", () => {
     const caja = pasosCaja();
