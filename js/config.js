@@ -1,4 +1,4 @@
-const NUMERO_WHATSAPP = "570000000000";
+const NUMERO_WHATSAPP = "573028653615";
 
 function telefonoVisible(numero) {
   const local = numero.startsWith("57") && numero.length === 12 ? numero.slice(2) : numero;
@@ -9,7 +9,7 @@ function telefonoVisible(numero) {
 export const CONFIG = {
   nombre: "Joss Peluquería",
   whatsapp: NUMERO_WHATSAPP,
-  instagram: "joss.ejemplo",
+  instagram: "joss.peluqueria",
   direccion: "Calle 78 # 30",
   horario: {
     texto: "Martes a sábado · 9:00 a. m. a 7:00 p. m.",
