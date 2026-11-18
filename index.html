@@ -537,7 +537,6 @@ padding: 0;
 list-style: none;
 }
 .hero-datos li,
-.confianza li,
 .valor {
 display: flex;
 align-items: center;
@@ -547,33 +546,8 @@ gap: 0.65rem;
 color: var(--gris);
 font-size: 0.95rem;
 }
-.confianza {
-border-block: 1px solid var(--linea);
-background: var(--negro);
-}
-.confianza ul {
-display: flex;
-gap: 1rem;
-margin: 0;
-padding: 0.9rem 0;
-overflow-x: auto;
-list-style: none;
-scroll-snap-type: x mandatory;
-}
 main section[id],
 .cita { scroll-margin-top: 92px; }
-.confianza li {
-flex: 0 0 auto;
-min-height: 44px;
-scroll-snap-align: start;
-color: var(--hueso);
-font-family: var(--impacto);
-font-size: 0.82rem;
-font-weight: 500;
-letter-spacing: 0.04em;
-line-height: 1.35;
-text-transform: uppercase;
-}
 .barra-movil {
 position: fixed;
 left: 0;
@@ -651,12 +625,8 @@ to { transform: scale(1.05); }
 }
 html.motion .hero-anima .hero-slide.is-on img { animation: hero-zoom 7s linear forwards; }
 @media (min-width: 700px) {
-.confianza ul { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; }
 .hero-datos { grid-template-columns: repeat(3, max-content); gap: 1.2rem; }
 .valores-lista { grid-template-columns: 1fr 1fr; }
-}
-@media (min-width: 1000px) {
-.confianza ul { grid-template-columns: repeat(4, 1fr); }
 }
 @media (min-width: 768px) {
 body.public { padding-bottom: 140px; }
@@ -740,9 +710,6 @@ border-radius: 12px;
 .visita-fondo.es-panel { inset: 0 0 0 42%; }
 .carta-movil { display: none; }
 .footer-grid { grid-template-columns: 1.1fr 1.4fr 0.8fr; align-items: start; }
-}
-@media (max-width: 699px) {
-.confianza ul { padding: 0.35rem 0 0.45rem; }
 }
 @media (max-width: 899px) {
 .visita-fondo.es-panel { inset: -8px 0; }
@@ -847,7 +814,7 @@ object-fit: cover;
 "url": "",
 "address": {
 "@type": "PostalAddress",
-"streetAddress": "Calle 78 # 30",
+"streetAddress": "Cra. 112A #78D - 30, Bogotá",
 "addressLocality": "",
 "addressRegion": "",
 "addressCountry": "CO"
@@ -919,12 +886,8 @@ object-fit: cover;
 </div>
 <ul class="hero-datos">
 <li>
-<svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H8l-3 2.5z"/></svg>
-<span data-texto="datoAgenda">Reserva en línea</span>
-</li>
-<li>
 <svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"/><circle cx="12" cy="11" r="2"/></svg>
-<span data-ciudad>Calle 78 # 30</span>
+<span data-ciudad>Cra. 112A #78D - 30, Bogotá</span>
 </li>
 <li>
 <svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="2.2"/><path d="M4.8 18c.5-2.3 2.2-3.5 4.2-3.5s3.7 1.2 4.2 3.5"/><circle cx="16.2" cy="9" r="1.7"/><path d="M14 14.8c.8-.4 1.8-.5 2.8-.2 1.3.4 2.2 1.5 2.6 3.2"/></svg>
@@ -946,14 +909,6 @@ object-fit: cover;
 </div>
 </div>
 </section>
-<div class="confianza">
-<ul class="wrap">
-<li><svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="2.4"/><path d="M6 19c.7-3 2.8-4.5 6-4.5S17.3 16 18 19"/></svg><span data-texto="confianzaEdades">Para todas las edades</span></li>
-<li><svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H8l-3 2.5z"/></svg><span data-texto="datoAgenda">Reserva en línea</span></li>
-<li><svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2"/><circle cx="6" cy="17" r="2"/><path d="M8 8.2 19 17M8 15.8 19 7"/></svg><span data-texto="confianzaCortes">Corte, color y cuidado</span></li>
-<li><svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v2l1 2a6 6 0 0 1 .8 3V20H8.2v-10a6 6 0 0 1 .8-3L10 5z"/></svg><span data-texto="confianzaProductos">Mechas y tratamientos</span></li>
-</ul>
-</div>
 <section class="seccion" id="nosotros" aria-labelledby="nosotros-titulo">
 <div class="wrap nosotros-compacto">
 <div class="reveal" data-revelar>
@@ -1039,8 +994,8 @@ object-fit: cover;
 <div class="wrap visita-grid">
 <article class="visita-tarjeta reveal" data-revelar>
 <p class="etiqueta">Visita</p>
-<h2 id="visita-titulo" data-ciudad>Calle 78 # 30</h2>
-<p class="visita-direccion" data-direccion>Calle 78 # 30</p>
+<h2 id="visita-titulo" data-ciudad>Cra. 112A #78D - 30, Bogotá</h2>
+<p class="visita-direccion" data-direccion>Cra. 112A #78D - 30, Bogotá</p>
 <p class="horario-nota" data-horario>Horario del local</p>
 <p class="visita-contacto">
 <a data-wa href="https://wa.me/573028653615?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20Joss%20Peluquer%C3%ADa." target="_blank" rel="noopener noreferrer" aria-label="Escribir por WhatsApp">302 865 3615</a>
@@ -1052,8 +1007,8 @@ object-fit: cover;
 </p>
 <p class="visita-pista" data-pista hidden>Busca el letrero luminoso de Joss.</p>
 <div class="grupo-botones">
-<a class="btn" data-maps href="https://www.google.com/maps/search/?api=1&query=Calle%2078%20%23%2030" target="_blank" rel="noopener">Cómo llegar</a>
-<a class="btn btn-sec" data-maps-buscar href="https://www.google.com/maps/search/?api=1&query=Calle%2078%20%23%2030" target="_blank" rel="noopener">Abrir en Google Maps</a>
+<a class="btn" data-maps href="https://www.google.com/maps/search/?api=1&query=Cra.%20112A%20%2378D%20-%2030%2C%20Bogot%C3%A1" target="_blank" rel="noopener">Cómo llegar</a>
+<a class="btn btn-sec" data-maps-buscar href="https://www.google.com/maps/search/?api=1&query=Cra.%20112A%20%2378D%20-%2030%2C%20Bogot%C3%A1" target="_blank" rel="noopener">Abrir en Google Maps</a>
 <a class="btn btn-sec" data-tel href="tel:+573028653615">Llamar</a>
 <button class="btn btn-sec" type="button" data-reservar>Reserva tu cita</button>
 </div>
@@ -1061,7 +1016,7 @@ object-fit: cover;
 <div class="mapa-marco" data-mapa>
 <div class="mapa-espera" data-mapa-espera>
 <svg class="icono" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"/><circle cx="12" cy="11" r="2"/></svg>
-<p data-direccion>Calle 78 # 30</p>
+<p data-direccion>Cra. 112A #78D - 30, Bogotá</p>
 <button class="btn btn-sec" type="button" data-mapa-ver>Ver mapa</button>
 </div>
 </div>
@@ -1102,8 +1057,8 @@ object-fit: cover;
 <h3><button class="faq-q" type="button" id="faq-b-2" aria-expanded="false" aria-controls="faq-p-2" data-faq-q="2">¿Dónde están?</button></h3>
 <div class="faq-panel" id="faq-p-2" role="region" aria-labelledby="faq-b-2">
 <div class="faq-cuerpo">
-<p data-faq-a="2">Calle 78 # 30</p>
-<p><a data-maps href="https://www.google.com/maps/search/?api=1&query=Calle%2078%20%23%2030" target="_blank" rel="noopener">Cómo llegar</a></p>
+<p data-faq-a="2">Cra. 112A #78D - 30, Bogotá</p>
+<p><a data-maps href="https://www.google.com/maps/search/?api=1&query=Cra.%20112A%20%2378D%20-%2030%2C%20Bogot%C3%A1" target="_blank" rel="noopener">Cómo llegar</a></p>
 </div>
 </div>
 </div>
@@ -1137,12 +1092,12 @@ object-fit: cover;
 </div>
 </div>
 <div class="wrap">
-<p class="footer-meta"><span data-direccion-corta>Calle 78 # 30</span> · <span data-horario>Horario del local</span> · © 2026 Joss Peluquería</p>
+<p class="footer-meta"><span data-direccion-corta>Cra. 112A #78D - 30, Bogotá</span> · <span data-horario>Horario del local</span> · © 2026 Joss Peluquería</p>
 </div>
 </footer>
 <nav class="barra-movil" data-barra aria-label="Reserva y mapa">
 <button class="btn" type="button" data-reservar>Reservar</button>
-<a class="btn btn-sec" data-maps href="https://www.google.com/maps/search/?api=1&query=Calle%2078%20%23%2030" target="_blank" rel="noopener">Cómo llegar</a>
+<a class="btn btn-sec" data-maps href="https://www.google.com/maps/search/?api=1&query=Cra.%20112A%20%2378D%20-%2030%2C%20Bogot%C3%A1" target="_blank" rel="noopener">Cómo llegar</a>
 </nav>
 <div class="flotantes">
 <a class="flotante flotante-ig" href="https://www.instagram.com/joss.peluqueria/" data-ig target="_blank" rel="noopener noreferrer" aria-label="Abrir Instagram de Joss Peluquería">
